@@ -266,7 +266,6 @@ for _No , ModelParts in ipairs(Result_Model:GetChildren()) do -- Play Chop Effec
 		if ModelParts:IsA("BasePart") then		
 				local InvisibilityEffect = TweenService:Create(ModelParts ,  TweenInfo.new(1 , Enum.EasingStyle.Linear , Enum.EasingDirection.Out , 0  ) , {Transparency = 1})
 		local HitEffect = TweenService:Create(ModelParts ,  TweenInfo.new(0.1 , Enum.EasingStyle.Linear , Enum.EasingDirection.Out , 0 , true  ) , {CFrame = ModelParts.CFrame * CFrame.new(0 ,-2.5 , 0)})
-		print(#PlrInventory)
 		HitEffect:Play()
 			
 			
