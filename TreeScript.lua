@@ -77,7 +77,6 @@ local function SetupCharacter(char)
 	 end  
 end
 
-
 local InventorySlots = 20 -- No of Slots
 Players.PlayerAdded:Connect(function(plr)  -- Set Up The Inventory and The Data Frame	
 	SetUpPlayer(plr , InventorySlots)
@@ -90,10 +89,7 @@ Players.PlayerAdded:Connect(function(plr)  -- Set Up The Inventory and The Data 
    end)
 	
 end)
-
-
 -- Set Up The Reward And The Wood It Will Drop By Getting The Tree's Name
-
 local function SetupTreeRewards( TemplateClone )	
 			
 				local RandomizeRewards = {}
@@ -141,12 +137,10 @@ local function SetUpTreeStats(Tree) -- Set Up The Trees Stats And Store The Tree
 			Health = TreesData[Tree.Name].Health      ;
 			Wood = TreesData[Tree.Name].Wood
 		} , 
-		PerTreeReward = {}
-				
-			}
+		PerTreeReward = {}		
+	}
 end
 --//
-
 --    //Get The Tree Models In The Folder And Sets It Collision Group  And Its Stats
 for _ , Tree in ipairs(ReplicatedStorage.TreesModels:GetChildren()) do 
 	for i , v in ipairs(Tree:GetChildren()) do
@@ -197,7 +191,8 @@ local function PlayTransparencyEffect(TreeArg:Model) -- Play  The Tree Hit Anima
 	end
 	
 end
-local function RespawnTree(Old:Model) -- Respawn The Tree  And Set It To The Pivot in Pivots
+-- Respawn The Tree  And Set It To The Pivot in Pivots
+local function RespawnTree(Old:Model) 
 	local RespawnTime = 5
 	
 	  task.wait(RespawnTime)
