@@ -34,13 +34,12 @@ local TreesData = {
 local PlrData = {}
 
 -- Check If The Player Can Hit The Tree 
-
 local CanHit = {} 
- -- Check If The Player Can Store Items In Their Respective Inventory
 
+-- Check If The Player Can Store Items In Their Respective Inventory
 local CanStoreItem = {}
--- Store The Tree Model's Pivot For Correct Position Of The Respawned Tree
 
+-- Store The Tree Model's Pivot For Correct Position Of The Respawned Tree
 local Pivots ={} 
 
 local function SetUpPlayer(plr:Player , NoOfSlots)
@@ -167,7 +166,7 @@ local function Store_Inventory_Values(Tree , Inventory , plr)
 	   -- Loop Through The Inventory And Making Sure That Data Isn't OverWritten
 	   for Index = 1 , #Inventory   do 
 					
-			if   Inventory[Index].Item == "" then
+			if  Inventory[Index] and Inventory[Index].Item == "" then
 			 
 			 CanStoreItem[plr] = true
              Inventory[Index].Item = val
@@ -262,10 +261,10 @@ Store_Inventory_Values(Result_Model , PlrInventory , plr)
     
 end	
 
-for _No , ModelParts in ipairs(Result_Model:GetChildren()) do -- Play Chop Effect// 
+for _No , ModelParts in ipairs(Result_Model:GetChildren()) do -- Play Tree Hit Effect// 
    if Health >= 0 then
 		if ModelParts:IsA("BasePart") then		
-				local InvisibilityEffect = TweenService:Create(ModelParts ,  TweenInfo.new(1 , Enum.EasingStyle.Linear , Enum.EasingDirection.Out , 0  ) , {Transparency = 1})
+	
 		local HitEffect = TweenService:Create(ModelParts ,  TweenInfo.new(0.1 , Enum.EasingStyle.Linear , Enum.EasingDirection.Out , 0 , true  ) , {CFrame = ModelParts.CFrame * CFrame.new(0 ,-2.5 , 0)})
 		HitEffect:Play()
 			
@@ -317,9 +316,9 @@ SetUpTrees()
 
 
 -- Concept Map 
--- Player Spawns In And Is Given A Inventory And Data
+-- Player Spawns In And Is Given A Inventory And Data Frame 
 -- Spawn Trees In Each Zone 
--- Player Gets Rewards
+-- Player Gets Listed Items  By Chopping Down Trees
   -- . Tree Wood
   -- . A Random Reward By Chance
 -- Tree is Reseted After A Little Time
