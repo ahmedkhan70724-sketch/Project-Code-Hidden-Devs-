@@ -199,23 +199,24 @@ local function RespawnTree(Old:Model)
 
 	   local Clone:Model =  TreeModels:FindFirstChild(Old.Name):Clone()
 	   Clone.Parent = workspace.Trees
-	
-	   SetUpTreeStats(Clone)
+	   local pivot = Pivots[Old]
+	   Clone:PivotTo(pivot)
+	  Pivots[Clone] = Clone:GetPivot()
+	 CanHit[Clone] = true
+	SetUpTreeStats(Clone)
 	   SetupTreeRewards(Clone)
 	
-	 local pivot = Pivots[Old]
-
-	 Clone:PivotTo(pivot)
 	 Pivots[Old]= nil
-	 Old:Destroy()
+	 CanHit[Old] = nil
+	TreesData[Old] = nil
+	Old:Destroy()
 	
-	 Pivots[Clone] = Clone:GetPivot()
-	 CanHit[Clone] = true
+	 
 end
 
 
 ChopEvent.OnServerEvent:Connect(function(plr , Result_Model:Model , Curraxe)-- The Result Of The Raycast (Tree) And The Axe That It Was Chopped Down With  
-   if not CanHit[Result_Model]  then return end	 
+   if not  Result_Model or not CanHit[Result_Model]  then return end	 
    local PlrInventory  = Inventory.ReturnPlrInventory(plr) 	
 
  CanStoreItem[plr] = false
