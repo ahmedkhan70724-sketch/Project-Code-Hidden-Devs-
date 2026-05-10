@@ -53,7 +53,7 @@ end
 
 
 local function SetAttributes(plr:Player)
-	for _ , data in PlrDataManager[plr.UserId] do
+	for _ , data in pairs(PlrDataManager[plr.UserId]) do
 		if type(data.Value) ~= "number"  then continue end
 		
 		plr:SetAttribute(data.Name , data.Value)
@@ -66,6 +66,7 @@ local function SetAttributes(plr:Player)
 	end
 	
 end
+
 
 
 -- Set Up The Inventory And Add The Tools 
