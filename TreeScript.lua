@@ -91,8 +91,8 @@ end)
 local InventorySlots = 15
 
 Players.PlayerAdded:Connect(function(plr)  -- Set Up The Inventory and The Data Frame	
-	-- Load The Data
-	PlrDataManager:Load(plr , {
+	-- Load The Data Or Provide Starter Data If Player Is New
+	PlrDataManager:Load(plr , { 
 
 		Money = {Name = "Money", Value = 1000},
 
@@ -108,12 +108,14 @@ Players.PlayerAdded:Connect(function(plr)  -- Set Up The Inventory and The Data 
 	
 	local Character = plr.Character or plr.CharacterAdded:Wait()
 	if Character  then
-		CollisionService:SetModelGroup(Character , "Player")
+		CollisionService:SetModelGroup(Character , "Player") -- Set The Character's Collision Group
 		InventoryModule:Refresh(plr)
 	end
 
 
 end)
+
+
 -- Set Up The Reward And The Wood It Will Drop By Getting The Tree's Name
 local function GiveResources( treeModel:Model, plr:Player )	
 	
