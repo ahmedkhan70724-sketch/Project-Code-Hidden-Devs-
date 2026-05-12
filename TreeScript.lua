@@ -160,7 +160,8 @@ function PlrDataManager:Save(plr:Player)
 			oldData.Money = self[plr.UserId].Money
 			oldData.Exp = self[plr.UserId].Exp
 			oldData.ToolsBought = self[plr.UserId].ToolsBought
-
+  oldData.SessionLock = nil
+oldData.SessionLockTime = nil
 			return oldData
 		end)
 
