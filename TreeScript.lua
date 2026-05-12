@@ -30,9 +30,27 @@ local treemodelContainer = ReplicatedStorage:FindFirstChild("TreesModels")
 local TreeFolder = workspace:FindFirstChild("Trees")
 local folderTrees = TreeFolder:GetChildren()
 
-
+--  Validation Layer
 local _Axesdata = {
-	"Wooden Axe","Stone Axe","Iron Axe", "Chainsaw"
+	["Wooden Axe"] = {
+		Name = "Wooden Axe",
+		Price = "Free" ,
+		Damage = 10
+	} ,["Stone Axe"] = {
+		Name = "Stone Axe",
+		Price = 200 ,
+		Damage = 20
+	} ,["Iron Axe"] = {
+		Name = "Iron Axe",
+		Price = 500 ,
+		Damage = 30
+	} ,["Chainsaw"] = {
+		Name = "Chainsaw",
+		Price = 1000 ,
+		Damage = 50
+	} 
+	
+	
 }
 
 -- Data Table
@@ -166,16 +184,16 @@ end
 
 
 local function SetAttributes(plr:Player)
+	
+	AttributeConnections[plr.UserId] = {}
 	for _ , data in pairs(PlrDataManager[plr.UserId]) do
 		if type(data.Value) ~= "number"  then continue end
 		
 		plr:SetAttribute(data.Name , data.Value)
 		
-	AttributeConnections[plr.UserId] = plr:GetAttributeChangedSignal(data.Name):Connect(function()
+		table.insert(AttributeConnections[plr.UserId] , plr:GetAttributeChangedSignal(data.Name):Connect(function()
 			data.Value = plr:GetAttribute(data.Name)
-			print(data)
-		end)
-		
+		end))
 	end
 	
 end
@@ -197,8 +215,9 @@ end
 Players.PlayerRemoving:Connect(function(plr)
 	PlrDataManager:Save(plr) -- Save The Data
     PlrDataManager[plr.UserId] = nil
-	AttributeConnections[plr.UserId]:Disconnect()
-	AttributeConnections[plr.UserId] = nil
+	for _ , connections in ipairs(AttributeConnections[plr.UserId]) do
+		connections:Disconnect()
+	end
 end)
 
 local InventorySlots = 15
@@ -313,19 +332,29 @@ end
 
 treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeData)-- The Result Of The Raycast (Tree) And The Axe That It Was Chopped Down With  
 	
-	if not  treeModel 
+	 local ServeraxeData = _Axesdata[AxeData.Name]
+	 
+	 if not ServeraxeData
+	 or  ServeraxeData.Price ~= AxeData.Price
+	 or  ServeraxeData.Damage ~= AxeData.Damage  
+	
+	or not table.find(PlrDataManager[plr.UserId].ToolsBought , AxeData.Name) 
+	
+	or not  treeModel 
 		or not treeModel:IsDescendantOf(TreeFolder) 
 		or not CollectionService:HasTag(treeModel , "Tree") 
-		or type(AxeData) ~= "table" 
-		or not table.find(_Axesdata , AxeData.Name) then return end
+		or type(AxeData) ~= "table"  then return end
+		
 
+		 
+       
 	-- Check The Player's Inventory To See If There Is Space
 	if not InventoryModule:HasSpace(plr) then
 	    return
 	end
 	if  not DistanceCheck(treeModel , plr , 15) then return end
 	
-	local Health =  treeModel:GetAttribute("Health")-AxeData.Damage -- Get The Attribute
+	local Health =  treeModel:GetAttribute("Health")-ServeraxeData.Damage -- Get The Attribute
 	treeModel:SetAttribute("Health" , Health)
 	
 	if Health <= 0   then  
@@ -336,13 +365,23 @@ treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeData)--
     Tweentree(treeModel)
 
 end)
+
+
 PurchaseEvent.OnServerEvent:Connect(function(plr , tooldata)-- Purchase Of The Items From The Shop
 
-
+	local ServeraxeData = _Axesdata[tooldata.Name]
+	
+	
+	if not ServeraxeData
+		or  ServeraxeData.Price ~= tooldata.Price
+		or  ServeraxeData.Damage ~= tooldata.Damage  then
+	return 
+	end 
+	
 	local Money = plr:GetAttribute("Money")
-	if not table.find(_Axesdata , tooldata.Name) then return end
-
-	if tooldata.Price <= Money  then
+	
+     
+	if ServeraxeData.Price <= Money  then
 		plr:SetAttribute("Money" , Money - tooldata.Price)
 		local BackpackTool = ReplicatedStorage.AxesFolder:FindFirstChild(tooldata.Name):Clone()
 		local StarterGearTool = ReplicatedStorage.AxesFolder:FindFirstChild(tooldata.Name):Clone() 
@@ -350,7 +389,7 @@ PurchaseEvent.OnServerEvent:Connect(function(plr , tooldata)-- Purchase Of The I
 		BackpackTool.Parent = plr.Backpack
 		StarterGearTool.Parent = plr:WaitForChild("StarterGear")
 
-		PlrDataManager:Addtool(plr , tooldata)
+		PlrDataManager:Addtool(plr , ServeraxeData)
 
 		PurchaseEvent:FireClient(plr , true)	
 
@@ -429,5 +468,4 @@ end)
 -- Tree is Reseted After A Little Time
 -- AutoSave Every 35 Seconds
 -- Save Data When Leaving
--- Save When The Servers Shut Down
 --//-
