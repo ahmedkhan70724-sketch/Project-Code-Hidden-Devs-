@@ -299,7 +299,7 @@ local function RespawnTree(oldTree:Model)
 end
 
 local function DistanceCheck(tree:Model , plr:Player , distance)
-	if not plr.Character or plr.Character.PrimaryPart then 
+	if not plr.Character or not plr.Character.PrimaryPart then 
 		return false
 	end
 	if (tree.PrimaryPart.Position - plr.Character.PrimaryPart.Position).Magnitude <= distance then
