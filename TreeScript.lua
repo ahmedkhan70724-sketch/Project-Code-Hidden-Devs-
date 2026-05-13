@@ -26,8 +26,8 @@ local PurchaseEvent = ReplicatedStorage.Remotes:WaitForChild("PurchaseEvent")
 
 local rewardsData , resourcesData = TreeRewards.SetUp()
 local Plots = workspace:FindFirstChild("Plots")
-local treemodelContainer = ReplicatedStorage:FindFirstChild("TreesModels") 
-local TreeFolder = workspace:FindFirstChild("Trees")
+local treemodelContainer = ReplicatedStorage:WaitForChild("TreesModels") 
+local TreeFolder = workspace:WaitForChild("Trees")
 local folderTrees = TreeFolder:GetChildren()
 
 --  Validation Layer
@@ -71,7 +71,7 @@ function PlrDataManager:Load(plr:Player , dataTemplate)
 	else
 		print("Failed To Load Data For:.."..":"..plr.Name)	
 		--/
-		self[plr.UserId] = table.clone(dataTemplate)
+		self[plr.UserId] =  dataTemplate
 
 
 
