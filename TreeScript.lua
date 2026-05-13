@@ -64,25 +64,24 @@ function PlrDataManager:Load(plr:Player , dataTemplate)
 		return PlayerData:GetAsync(plr.UserId)
 	end)
 
-	
 
 
 	if success and data then
-		print("Successfully Loaded Data For "..":"..plr.Name)
-		self[plr.UserId] = data		
-
+		print("Successfully Loaded Data For "..":"..plr.Name)		
 	else
 		print("Failed To Load Data For:.."..":"..plr.Name)	
 		--/
-		self[plr.UserId] = dataTemplate
+		self[plr.UserId] = table.clone(dataTemplate)
 
 
 
 	end 
 	if self[plr.UserId].SessionLock and self[plr.UserId].SessionLock ~= game.JobId and os.time() - (self[plr.UserId].SessionLockTime or 0 )  < 120  then
-			return nil
+			return 
 	end
-		self[plr.UserId].SessionLock = game.JobId
+		
+	self[plr.UserId] = data
+	self[plr.UserId].SessionLock = game.JobId
 		self[plr.UserId].SessionLockTime = os.time()
 
 end
@@ -219,7 +218,8 @@ Players.PlayerRemoving:Connect(function(plr)
 	for _ , connections in ipairs(AttributeConnections[plr.UserId]) do
 		connections:Disconnect()
 	end
-end)
+AttributeConnections[plr.UserId] = nil
+	end)
 
 local InventorySlots = 15
 
@@ -299,7 +299,7 @@ local function RespawnTree(oldTree:Model)
 end
 
 local function DistanceCheck(tree:Model , plr:Player , distance)
-	if not plr.Character then 
+	if not plr.Character or plr.Character.PrimaryPart then 
 		return false
 	end
 	if (tree.PrimaryPart.Position - plr.Character.PrimaryPart.Position).Magnitude <= distance then
@@ -383,7 +383,7 @@ PurchaseEvent.OnServerEvent:Connect(function(plr , tooldata)-- Purchase Of The I
 	
      
 	if ServeraxeData.Price <= Money  then
-		plr:SetAttribute("Money" , Money - tooldata.Price)
+		plr:SetAttribute("Money" , Money - ServeraxeData.Price)
 		local BackpackTool = ReplicatedStorage.AxesFolder:FindFirstChild(tooldata.Name):Clone()
 		local StarterGearTool = ReplicatedStorage.AxesFolder:FindFirstChild(tooldata.Name):Clone() 
 		
