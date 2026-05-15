@@ -13,7 +13,6 @@ local DataStoreService = game:GetService("DataStoreService")
 local PlayerData = DataStoreService:GetDataStore("PlayerData")
 
 --Modules
-
 local InventoryModule = require(game.ReplicatedStorage.Modules:WaitForChild("Inventory"))
 local TreeRewards  = require(ReplicatedStorage.Modules:WaitForChild("Rewards"))
 local CollisionService = require(ReplicatedStorage.Modules:WaitForChild("CollisionService")) --  Collision Groups
@@ -21,15 +20,13 @@ local ToolsService = require(ReplicatedStorage.Modules:WaitForChild("ToolsServic
 
 --Remotes/
 local treeChopRemote = ReplicatedStorage.Remotes:FindFirstChild("ChopEvent")
-
-
+--//
 local rewardsData , resourcesData = TreeRewards.SetUp()
 local Plots = workspace:FindFirstChild("Plots")
 local treemodelContainer = ReplicatedStorage:FindFirstChild("TreesModels") 
 local TreeFolder = workspace:FindFirstChild("Trees")
 local folderTrees = TreeFolder:GetChildren()
-
-
+-- Security Layer
 local _Axesdata = {
 	["Wooden Axe"] = {
 		Name = "Wooden Axe",
@@ -51,18 +48,14 @@ local _Axesdata = {
 	
 	
 }
-
 -- Data Table
 local PlrDataManager = {}
 local AttributeConnections = {}
 
 function PlrDataManager:Load(plr:Player , dataTemplate)
-
-	
 	local success , data = pcall(function()
 		return PlayerData:GetAsync(plr.UserId)
 	end)
-
 
 	if success and data then
 		print("Successfully Loaded Data For "..":"..plr.Name)
@@ -76,13 +69,9 @@ function PlrDataManager:Load(plr:Player , dataTemplate)
 		self[plr.UserId] = dataTemplate
 
 	end 
-	
 		self[plr.UserId].SessionLock = game.JobId
 		self[plr.UserId].SessionLockTime = os.time()
-
 end
-
-
 
 -- Save data 
 function PlrDataManager:Update(plr:Player)
@@ -115,11 +104,7 @@ function PlrDataManager:Update(plr:Player)
 			print("Failed To Load Data For".." : "..plr.Name)
 			task.wait(1)
 		end	
-
-
 	end
-
-
 end
 
 function PlrDataManager:Save(plr:Player)
@@ -146,7 +131,7 @@ end
 
 
 local function Tweentree(tree:Model) 
-   
+
    for _No , ModelParts in ipairs(tree:GetChildren()) do -- Play Chop Effect// 
 			if ModelParts:IsA("BasePart") then		
 				local HitEffect = TweenService:Create(ModelParts ,  TweenInfo.new(0.1 , Enum.EasingStyle.Linear , Enum.EasingDirection.Out , 0 , true  ) , {CFrame = ModelParts.CFrame * CFrame.new(0 ,-2.5 , 0)})
@@ -156,7 +141,6 @@ local function Tweentree(tree:Model)
 
 	end 
 end
-
 
 local function SetAttributes(plr:Player)
 	
@@ -182,9 +166,6 @@ end
 
 -- Set Up The Inventory And Add The Tools 
 local function SetupPlayer(plr:Player , NoOfSlots)
-
-	 
-
 	--//
 	SetAttributes(plr)
 
@@ -306,7 +287,6 @@ local function DestroyTree(tree, plr)
 			parts:Destroy()	
 		end
 
-
 	end
 	
 	PlayTransparencyEffect(tree) -- Play Fading Effect //
@@ -315,7 +295,7 @@ local function DestroyTree(tree, plr)
 end
 
 treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeName:string)-- The Result Of The Raycast (Tree) And The Axe That It Was Chopped Down With  
-	
+
 	 local ServeraxeData = _Axesdata[AxeName]
 	 
 	 if not ServeraxeData
@@ -345,9 +325,6 @@ treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeName:st
     Tweentree(treeModel)
 
 end)
-
-
-
 
 
 -- Spawn The Trees On The  Plots
