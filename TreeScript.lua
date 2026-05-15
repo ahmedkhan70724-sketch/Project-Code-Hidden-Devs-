@@ -17,24 +17,23 @@ local PlayerData = DataStoreService:GetDataStore("PlayerData")
 local InventoryModule = require(game.ReplicatedStorage.Modules:WaitForChild("Inventory"))
 local TreeRewards  = require(ReplicatedStorage.Modules:WaitForChild("Rewards"))
 local CollisionService = require(ReplicatedStorage.Modules:WaitForChild("CollisionService")) --  Collision Groups
-
+local ToolsService = require(ReplicatedStorage.Modules:WaitForChild("ToolsService"))
 
 --Remotes/
-local treeChopRemote = ReplicatedStorage.Remotes:WaitForChild("ChopEvent")
-local PurchaseEvent = ReplicatedStorage.Remotes:WaitForChild("PurchaseEvent")
+local treeChopRemote = ReplicatedStorage.Remotes:FindFirstChild("ChopEvent")
 
 
 local rewardsData , resourcesData = TreeRewards.SetUp()
 local Plots = workspace:FindFirstChild("Plots")
-local treemodelContainer = ReplicatedStorage:WaitForChild("TreesModels") 
-local TreeFolder = workspace:WaitForChild("Trees")
+local treemodelContainer = ReplicatedStorage:FindFirstChild("TreesModels") 
+local TreeFolder = workspace:FindFirstChild("Trees")
 local folderTrees = TreeFolder:GetChildren()
 
---  Validation Layer
+
 local _Axesdata = {
 	["Wooden Axe"] = {
 		Name = "Wooden Axe",
-		Price = 0 ,
+		Price = "Free" ,
 		Damage = 10
 	} ,["Stone Axe"] = {
 		Name = "Stone Axe",
@@ -59,78 +58,51 @@ local AttributeConnections = {}
 
 function PlrDataManager:Load(plr:Player , dataTemplate)
 
-	local InventorySlots = 20
+	
 	local success , data = pcall(function()
 		return PlayerData:GetAsync(plr.UserId)
 	end)
 
 
-
 	if success and data then
-		print("Successfully Loaded Data For "..":"..plr.Name)		
+		print("Successfully Loaded Data For "..":"..plr.Name)
+		self[plr.UserId] = data
+		ToolsService:Setuptools(plr , data.ToolsBought)
+	    InventoryModule:LoadPlrInventory(plr , data.Inventory)
+		
 	else
 		print("Failed To Load Data For:.."..":"..plr.Name)	
 		--/
-		self[plr.UserId] =  dataTemplate
-
-
+		self[plr.UserId] = dataTemplate
 
 	end 
-	if self[plr.UserId].SessionLock and self[plr.UserId].SessionLock ~= game.JobId and os.time() - (self[plr.UserId].SessionLockTime or 0 )  < 120  then
-			return 
-	end
-		
-	self[plr.UserId] = data
-	self[plr.UserId].SessionLock = game.JobId
+	
+		self[plr.UserId].SessionLock = game.JobId
 		self[plr.UserId].SessionLockTime = os.time()
 
 end
 
-function PlrDataManager:Addtool(plr:Player , toolData)
-
-	local PlrToolsData = self[plr.UserId].ToolsBought
-
-	if table.find( PlrToolsData , toolData.Name)  then return end
-
-	table.insert(PlrToolsData , toolData.Name)
-
-end
-
--- Give The Saved/Bought Tools To The Player
-
-function PlrDataManager:GiveTools(plr:Player)
-	if not self[plr.UserId].ToolsBought then return end
-
-	for i , v  in ipairs(self[plr.UserId].ToolsBought) do
-
-		if not v then continue end
-		local Tool  = ReplicatedStorage.AxesFolder:FindFirstChild(v)
-		if not Tool then continue end
-		local StarterGear_Clone = Tool:Clone()
-		local Backpack_Clone =  Tool:Clone()
-
-		Backpack_Clone.Parent = plr.Backpack
-		StarterGear_Clone.Parent = plr.StarterGear
-	end
-end
 
 
 -- Save data 
 function PlrDataManager:Update(plr:Player)
 
 	local tries = 0
-
-
 	while tries < 3  do
+		tries += 1
+		if self[plr.UserId].SessionLock and self[plr.UserId].SessionLock ~= game.JobId and os.time() - (self[plr.UserId].SessionLockTime or 0 )  < 120  then
+			return 
+		end
 		local  success , data = pcall(function()
 			PlayerData:UpdateAsync(plr.UserId , function(oldData)  -- Merge The Player's Saved Data
-				tries += 1
+				
 				oldData = oldData or {}
 
 				oldData.Money = self[plr.UserId].Money
 				oldData.Exp   = self[plr.UserId].Exp
-				oldData.ToolsBought = self[plr.UserId].ToolsBought
-
+				oldData.ToolsBought = ToolsService:FindPlrData(plr)
+				oldData.Inventory = InventoryModule:ReturnPlrInventory(plr)
+				
 				return oldData
 			end)
 		end)
@@ -156,11 +128,14 @@ function PlrDataManager:Save(plr:Player)
 
 		PlayerData:UpdateAsync(plr.UserId , function(oldData)
              oldData = oldData or {}
+			
 			oldData.Money = self[plr.UserId].Money
 			oldData.Exp = self[plr.UserId].Exp
-			oldData.ToolsBought = self[plr.UserId].ToolsBought
-  oldData.SessionLock = nil
-oldData.SessionLockTime = nil
+			oldData.ToolsBought = ToolsService:FindPlrData(plr)
+			oldData.Inventory = InventoryModule:ReturnPlrInventory(plr)
+			oldData.SessionLock = nil
+			oldData.SessionLockTime = nil
+
 			return oldData
 		end)
 
@@ -187,7 +162,13 @@ local function SetAttributes(plr:Player)
 	
 	AttributeConnections[plr.UserId] = {}
 	for _ , data in pairs(PlrDataManager[plr.UserId]) do
-		if type(data.Value) ~= "number"  then continue end
+		if type(data) ~= "table" then
+			continue 
+		end
+		
+		if not data.Value or type(data.Value) ~= "number" then
+			continue
+		end
 		
 		plr:SetAttribute(data.Name , data.Value)
 		
@@ -201,10 +182,9 @@ end
 
 -- Set Up The Inventory And Add The Tools 
 local function SetupPlayer(plr:Player , NoOfSlots)
-	
+
 	 
-	local plrInventory = InventoryModule.SetUp(plr , NoOfSlots )
-	plrInventory  = InventoryModule.AddSlots(NoOfSlots , plrInventory , plr)	
+
 	--//
 	SetAttributes(plr)
 
@@ -214,14 +194,16 @@ end
 
 Players.PlayerRemoving:Connect(function(plr)
 	PlrDataManager:Save(plr) -- Save The Data
-    PlrDataManager[plr.UserId] = nil
+   
 	for _ , connections in ipairs(AttributeConnections[plr.UserId]) do
 		connections:Disconnect()
-	end
-AttributeConnections[plr.UserId] = nil
-	end)
+	end 
+	
+	AttributeConnections[plr.UserId] = nil
+	PlrDataManager[plr.UserId] = nil
+end)
 
-local InventorySlots = 15
+
 
 Players.PlayerAdded:Connect(function(plr)  -- Set Up The Inventory and The Data Frame	
 	-- Load The Data
@@ -231,13 +213,15 @@ Players.PlayerAdded:Connect(function(plr)  -- Set Up The Inventory and The Data 
 
 		Exp   = {Name = "Exp", Value = 0} ,
 
-		ToolsBought = {}  
+		ToolsBought = ToolsService:CreateTemplate(plr) ,
+
+        Inventory = InventoryModule:SetUp(plr)
 	}  
 ) 
-	SetupPlayer(plr , InventorySlots)
+	SetupPlayer(plr)
 
 	-- Give The Saved Tools
-	PlrDataManager:GiveTools(plr)
+	ToolsService:GiveTools(plr)
 	
 	local Character = plr.Character or plr.CharacterAdded:Wait()
 	if Character  then
@@ -282,8 +266,6 @@ local function PlayTransparencyEffect(Tree:Model)
 
 end
 
-
-
 -- Respawn The Tree  And Set It Up
 local function RespawnTree(oldTree:Model) 
     task.wait(05)
@@ -299,7 +281,7 @@ local function RespawnTree(oldTree:Model)
 end
 
 local function DistanceCheck(tree:Model , plr:Player , distance)
-	if not plr.Character or not plr.Character.PrimaryPart then 
+	if not plr.Character then 
 		return false
 	end
 	if (tree.PrimaryPart.Position - plr.Character.PrimaryPart.Position).Magnitude <= distance then
@@ -326,28 +308,25 @@ local function DestroyTree(tree, plr)
 
 
 	end
+	
 	PlayTransparencyEffect(tree) -- Play Fading Effect //
 	RespawnTree(tree) -- Respawn Tree//..
 
 end
 
-treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeData)-- The Result Of The Raycast (Tree) And The Axe That It Was Chopped Down With  
+treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeName:string)-- The Result Of The Raycast (Tree) And The Axe That It Was Chopped Down With  
 	
-	 local ServeraxeData = _Axesdata[AxeData.Name]
+	 local ServeraxeData = _Axesdata[AxeName]
 	 
 	 if not ServeraxeData
-	 or  ServeraxeData.Price ~= AxeData.Price
-	 or  ServeraxeData.Damage ~= AxeData.Damage  
 	
-	or not table.find(PlrDataManager[plr.UserId].ToolsBought , AxeData.Name) 
+	or ServeraxeData.Name ~= "Wooden Axe" and not table.find(PlrDataManager[plr.UserId].ToolsBought , AxeName)   
 	
 	or not  treeModel 
 		or not treeModel:IsDescendantOf(TreeFolder) 
 		or not CollectionService:HasTag(treeModel , "Tree") 
-		or type(AxeData) ~= "table"  then return end
-		
+		or type(AxeName) ~= "string"  then return end
 
-		 
        
 	-- Check The Player's Inventory To See If There Is Space
 	if not InventoryModule:HasSpace(plr) then
@@ -368,36 +347,6 @@ treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeData)--
 end)
 
 
-PurchaseEvent.OnServerEvent:Connect(function(plr , tooldata)-- Purchase Of The Items From The Shop
-
-	local ServeraxeData = _Axesdata[tooldata.Name]
-	
-	
-	if not ServeraxeData
-		or  ServeraxeData.Price ~= tooldata.Price
-		or  ServeraxeData.Damage ~= tooldata.Damage  then
-	return 
-	end 
-	
-	local Money = plr:GetAttribute("Money")
-	
-     
-	if ServeraxeData.Price <= Money  then
-		plr:SetAttribute("Money" , Money - ServeraxeData.Price)
-		local BackpackTool = ReplicatedStorage.AxesFolder:FindFirstChild(tooldata.Name):Clone()
-		local StarterGearTool = ReplicatedStorage.AxesFolder:FindFirstChild(tooldata.Name):Clone() 
-		
-		BackpackTool.Parent = plr.Backpack
-		StarterGearTool.Parent = plr:WaitForChild("StarterGear")
-
-		PlrDataManager:Addtool(plr , ServeraxeData)
-
-		PurchaseEvent:FireClient(plr , true)	
-
-	end
-
-
-end)
 
 
 
@@ -406,6 +355,7 @@ local function SetupTrees()
 	local x = 5 
 	local z = 5					
 	local PlotIndex = 1 -- Current index Of Tree Zone  That Is Being Set
+	local Count = 0
 	local treeTemplate  
 	
 	
@@ -417,9 +367,12 @@ local function SetupTrees()
 		treeTemplate = folderTrees[PlotIndex]
 
 		PlotIndex += 1	  -- Increment The no
-
+        
 		for Xside = -x , x  do -- Spawn trees in a  Square formation
-			task.wait(0.2)
+			if Count % 25 then
+				task.wait()
+				Count = 0
+			end
 
 			for Zside = -z , z  do
 				local treeTemplateClone:Model = treeTemplate:Clone()
@@ -432,6 +385,7 @@ local function SetupTrees()
 				CollectionService:AddTag(treeTemplateClone , "Tree")               
 			end
 		end	
+		Count += 1
 	end
 
 
