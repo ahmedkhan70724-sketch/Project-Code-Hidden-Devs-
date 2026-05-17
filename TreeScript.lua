@@ -36,9 +36,7 @@ local Cooldowns = {}
   local Multiplier = {
 		Front = 1,
 		Back = 0.5,
-	    Side = 1.75
-		
-		
+	    Side = 1.75	
   }
 
 local function Tweentree(tree:Model) 
@@ -64,8 +62,6 @@ local function SetAttributes(plr:Player)
 		if data == game.JobId or data == os.time() then
 			continue
 		end
-	   
-		
 		plr:SetAttribute(key , data)
 		
 		table.insert(AttributeConnections[plr.UserId] , plr:GetAttributeChangedSignal(key):Connect(function()
@@ -92,8 +88,6 @@ Players.PlayerRemoving:Connect(function(plr)
 	AttributeConnections[plr.UserId] = nil
 	PlrDataManager[plr.UserId] = nil
 end)
-
-
 
 Players.PlayerAdded:Connect(function(plr)  -- Set Up The Inventory and The Data Frame	
 	-- Load The Data
@@ -281,8 +275,6 @@ local function SetupTrees()
 	local PlotIndex = 1 -- Current index Of Tree Zone  That Is Being Set
 	local Count = 1
 	local treeTemplate  
-	
-	
 	-- Loop To Select The Current Tree Model Of The Trees Folder
 	for _ , TreeModel in ipairs(treemodelContainer:GetChildren()) do 
 		local Plot = Plots:WaitForChild("Plot"..PlotIndex)-- The Currrent Plot/Zone (Plot1 , Plot2 .etc)
@@ -297,7 +289,6 @@ local function SetupTrees()
 				task.wait()
 				Count = 0
 			end
-
 			for Zside = -z , z  do
 				local treeTemplateClone:Model = treeTemplate:Clone()
 
