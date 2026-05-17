@@ -37,6 +37,8 @@ local Cooldowns = {}
 		Front = 1,
 		Back = 0.5,
 	    Side = 1.75
+		
+		
   }
 
 local function Tweentree(tree:Model) 
@@ -227,15 +229,15 @@ treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeName:st
 	
 	 local ServeraxeData = _AxesData[AxeName]
 	 local Tool = plr.Character:FindFirstChildOfClass("Tool")
-  	   
-		if not ServeraxeData  
-	    or not  treeModel 
+  	   if not ServeraxeData  
+	   or not _AxesData[Tool.Name]
+	   or not  treeModel 
 		or not treeModel:IsDescendantOf(TreeFolder) 
 		or not CollectionService:HasTag(treeModel , "Tree") 
 		or type(AxeName) ~= "string"   
-		or Tool.Name ~= AxeName then return end
+		or Tool.Name ~= AxeName then
 		
-		
+		return end
 	   
 	   if treeModel:GetAttribute("Debounce") == true  then
 			return
@@ -257,19 +259,18 @@ treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeName:st
 	
 	local Health =  treeModel:GetAttribute("Health")- Damage -- Get The Attribute
 	treeModel:SetAttribute("Health" , Health)
-
+	Cooldowns[plr.UserId] = true
 	if Health <= 0   then  
 		DestroyTree(treeModel , plr)
        return
 	end	
+ 
     Tweentree(treeModel)
-	
 	treeModel:SetAttribute("Debounce" , true)
-	Cooldowns[plr.UserId] = true
 	
 	task.delay(2 , function()
-	 Cooldowns[plr.UserId] = false
-	 treeModel:SetAttribute("Debounce" , false)
+		Cooldowns[plr.UserId] = false
+		treeModel:SetAttribute("Debounce" , false)
 	end)
 end)
 
@@ -310,6 +311,10 @@ local function SetupTrees()
 		end	
 		Count += 1
 	end
+
+
+
+
 end
 
 SetupTrees()
