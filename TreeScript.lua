@@ -1,6 +1,7 @@
 --# Project-Code-Hidden-Devs-
 -- Scripter : 590BILL
-
+-- Discord : 590bill
+-- Roblox  : 590Bill
 -- Services/
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
