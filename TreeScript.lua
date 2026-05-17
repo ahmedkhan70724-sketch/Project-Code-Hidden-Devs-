@@ -6,7 +6,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
-local Debris = game:GetService("Debris")
 
 
 --Modules
@@ -27,7 +26,6 @@ local treemodelContainer = ReplicatedStorage:FindFirstChild("TreesModels")
 local TreeFolder = workspace:FindFirstChild("Trees")
 local folderTrees = TreeFolder:GetChildren()
 
-
 -- Data Table
 local AttributeConnections = {}
 local _AxesData = AxesService.ReturnTools()
@@ -45,12 +43,9 @@ local function Tweentree(tree:Model)
 			if ModelParts:IsA("BasePart") then		
 				local HitEffect = TweenService:Create(ModelParts ,  TweenInfo.new(0.1 , Enum.EasingStyle.Linear , Enum.EasingDirection.Out , 0 , true  ) , {CFrame = ModelParts.CFrame * CFrame.new(0 ,-2.5 , 0)})
 				HitEffect:Play()
-
 			end
-
 	end 
 end
-
 
 local function SetAttributes(plr:Player)
 	
@@ -62,6 +57,7 @@ local function SetAttributes(plr:Player)
 		if data == game.JobId or data == os.time() then
 			continue
 		end
+	   
 		plr:SetAttribute(key , data)
 		
 		table.insert(AttributeConnections[plr.UserId] , plr:GetAttributeChangedSignal(key):Connect(function()
@@ -70,7 +66,6 @@ local function SetAttributes(plr:Player)
 	end
 	
 end
-
 
 -- Set Up The Inventory And Add The Tools 
 local function SetupPlayer(plr:Player , NoOfSlots)
@@ -94,7 +89,6 @@ Players.PlayerAdded:Connect(function(plr)  -- Set Up The Inventory and The Data 
 	PlrDataManager:Load(plr , {
 
 		Money  = 1000 ,
-
 		Exp   = 0 ,
         TimePlayed = 0 ,
 		ToolsBought = ToolsService:CreateTemplate(plr) ,
@@ -180,9 +174,11 @@ local function RespawnTree(oldTree:Model)
 
 	local pivot = oldTree:GetAttribute("LastPivot")
 	treeClone:PivotTo(pivot)
+	
+	treeClone:SetAttribute("Debounce" , false)
 	treeClone:SetAttribute("LastPivot" , treeClone:GetPivot())   
 
-	Debris:AddItem(oldTree , 5)
+	oldTree:Destroy()
 end
 
 local function DistanceCheck(tree:Model , plr:Player , distance)
@@ -198,11 +194,9 @@ local function DistanceCheck(tree:Model , plr:Player , distance)
 end
 
 local function DestroyTree(tree, plr)
-	
 	CollectionService:RemoveTag(tree , "Tree") -- Cant Hit The Tree To Stop The Duplication Of Rewards
-
 	GiveResources(tree , plr)
-
+	
 	for _ , parts in ipairs(tree:GetChildren()) do
 		if parts:IsA("BasePart") then
 			parts.Anchored = false
@@ -210,11 +204,8 @@ local function DestroyTree(tree, plr)
 		elseif  parts:IsA("IntValue") or parts.Name == "Decor"  then
 			parts:Destroy()	
 		end
-
-
 	end
 		
-	
 	PlayTransparencyEffect(tree) -- Play Fading Effect //
 	RespawnTree(tree) -- Respawn Tree//..
 end
@@ -226,14 +217,18 @@ treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeName:st
   	   if not ServeraxeData  
 	   or not _AxesData[Tool.Name]
 	   or not  treeModel 
-		or not treeModel:IsDescendantOf(TreeFolder) 
+		
+		or not treeModel:IsDescendantOf(TreeFolder)
 		or not CollectionService:HasTag(treeModel , "Tree") 
 		or type(AxeName) ~= "string"   
 		or Tool.Name ~= AxeName then
 		
 		return end
-	   
+	   if  not  treeModel:GetAttribute("Debounce") then
+			treeModel:SetAttribute("Debounce" , false) 
+	   end
 	   if treeModel:GetAttribute("Debounce") == true  then
+			print(" Debounce")
 			return
 	   end
 	 
@@ -255,8 +250,9 @@ treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeName:st
 	treeModel:SetAttribute("Health" , Health)
 	Cooldowns[plr.UserId] = true
 	if Health <= 0   then  
+		Cooldowns[plr.UserId] = false
 		DestroyTree(treeModel , plr)
-       return
+ 	  return
 	end	
  
     Tweentree(treeModel)
@@ -275,6 +271,8 @@ local function SetupTrees()
 	local PlotIndex = 1 -- Current index Of Tree Zone  That Is Being Set
 	local Count = 1
 	local treeTemplate  
+	
+	
 	-- Loop To Select The Current Tree Model Of The Trees Folder
 	for _ , TreeModel in ipairs(treemodelContainer:GetChildren()) do 
 		local Plot = Plots:WaitForChild("Plot"..PlotIndex)-- The Currrent Plot/Zone (Plot1 , Plot2 .etc)
@@ -289,9 +287,10 @@ local function SetupTrees()
 				task.wait()
 				Count = 0
 			end
+
 			for Zside = -z , z  do
 				local treeTemplateClone:Model = treeTemplate:Clone()
-
+				
 				treeTemplateClone.Parent = workspace.Trees 
 				local space_between_trees = 10 
 				treeTemplateClone:PivotTo(Plot.CFrame * CFrame.new(Xside * space_between_trees , Plot.Size.Y + treeTemplateClone.PrimaryPart.Size.Y/2 , Zside * space_between_trees) )  
@@ -302,10 +301,6 @@ local function SetupTrees()
 		end	
 		Count += 1
 	end
-
-
-
-
 end
 
 SetupTrees()
@@ -315,7 +310,6 @@ game:BindToClose(function()
 		PlrDataManager:Save(plr)
 	end
 end)
-
 
 -- AutoSave Player's Data
 task.spawn(function()
