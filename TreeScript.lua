@@ -7,131 +7,40 @@ local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local CollectionService = game:GetService("CollectionService")
 local Debris = game:GetService("Debris")
-local DataStoreService = game:GetService("DataStoreService")
 
---Data Store For The Player's Data
-local PlayerData = DataStoreService:GetDataStore("PlayerData")
 
 --Modules
 local InventoryModule = require(game.ReplicatedStorage.Modules:WaitForChild("Inventory"))
 local TreeRewards  = require(ReplicatedStorage.Modules:WaitForChild("Rewards"))
 local CollisionService = require(ReplicatedStorage.Modules:WaitForChild("CollisionService")) --  Collision Groups
 local ToolsService = require(ReplicatedStorage.Modules:WaitForChild("ToolsService"))
+local AxesService = require(ReplicatedStorage.Modules:WaitForChild("AxesModule"))
+local PlrDataManager = require(ReplicatedStorage.Modules:WaitForChild("PlrDataManager"))
 
 --Remotes/
 local treeChopRemote = ReplicatedStorage.Remotes:FindFirstChild("ChopEvent")
---//
+
 local rewardsData , resourcesData = TreeRewards.SetUp()
+AxesService.Setup()
 local Plots = workspace:FindFirstChild("Plots")
 local treemodelContainer = ReplicatedStorage:FindFirstChild("TreesModels") 
 local TreeFolder = workspace:FindFirstChild("Trees")
 local folderTrees = TreeFolder:GetChildren()
--- Security Layer
-local _Axesdata = {
-	["Wooden Axe"] = {
-		Name = "Wooden Axe",
-		Price = "Free" ,
-		Damage = 10
-	} ,["Stone Axe"] = {
-		Name = "Stone Axe",
-		Price = 200 ,
-		Damage = 20
-	} ,["Iron Axe"] = {
-		Name = "Iron Axe",
-		Price = 500 ,
-		Damage = 30
-	} ,["Chainsaw"] = {
-		Name = "Chainsaw",
-		Price = 1000 ,
-		Damage = 50
-	} 
-	
-	
-}
+
+
 -- Data Table
-local PlrDataManager = {}
 local AttributeConnections = {}
-
-function PlrDataManager:Load(plr:Player , dataTemplate)
-	local success , data = pcall(function()
-		return PlayerData:GetAsync(plr.UserId)
-	end)
-
-	if success and data then
-		print("Successfully Loaded Data For "..":"..plr.Name)
-		self[plr.UserId] = data
-		ToolsService:Setuptools(plr , data.ToolsBought)
-	    InventoryModule:LoadPlrInventory(plr , data.Inventory)
-		
-	else
-		print("Failed To Load Data For:.."..":"..plr.Name)	
-		--/
-		self[plr.UserId] = dataTemplate
-
-	end 
-		self[plr.UserId].SessionLock = game.JobId
-		self[plr.UserId].SessionLockTime = os.time()
-end
-
--- Save data 
-function PlrDataManager:Update(plr:Player)
-
-	local tries = 0
-	while tries < 3  do
-		tries += 1
-		if self[plr.UserId].SessionLock and self[plr.UserId].SessionLock ~= game.JobId and os.time() - (self[plr.UserId].SessionLockTime or 0 )  < 120  then
-			return 
-		end
-		local  success , data = pcall(function()
-			PlayerData:UpdateAsync(plr.UserId , function(oldData)  -- Merge The Player's Saved Data
-				
-				oldData = oldData or {}
-
-				oldData.Money = self[plr.UserId].Money
-				oldData.Exp   = self[plr.UserId].Exp
-				oldData.ToolsBought = ToolsService:FindPlrData(plr)
-				oldData.Inventory = InventoryModule:ReturnPlrInventory(plr)
-				
-				return oldData
-			end)
-		end)
-
-
-		if success then
-			print(plr.Name.."'s".."Data Has Been Succesfully Saved")
-            break
-		else
-			print("Failed To Load Data For".." : "..plr.Name)
-			task.wait(1)
-		end	
-	end
-end
-
-function PlrDataManager:Save(plr:Player)
-
-	pcall(function()
-
-		PlayerData:UpdateAsync(plr.UserId , function(oldData)
-             oldData = oldData or {}
-			
-			oldData.Money = self[plr.UserId].Money
-			oldData.Exp = self[plr.UserId].Exp
-			oldData.ToolsBought = ToolsService:FindPlrData(plr)
-			oldData.Inventory = InventoryModule:ReturnPlrInventory(plr)
-			oldData.SessionLock = nil
-			oldData.SessionLockTime = nil
-
-			return oldData
-		end)
-
-	end)
-
-
-end
-
+local _AxesData = AxesService.ReturnTools()
+local Cooldowns = {}
+-- Damage Multiplier 
+  local Multiplier = {
+		Front = 1,
+		Back = 0.5,
+	    Side = 1.75
+  }
 
 local function Tweentree(tree:Model) 
-
+   
    for _No , ModelParts in ipairs(tree:GetChildren()) do -- Play Chop Effect// 
 			if ModelParts:IsA("BasePart") then		
 				local HitEffect = TweenService:Create(ModelParts ,  TweenInfo.new(0.1 , Enum.EasingStyle.Linear , Enum.EasingDirection.Out , 0 , true  ) , {CFrame = ModelParts.CFrame * CFrame.new(0 ,-2.5 , 0)})
@@ -142,22 +51,23 @@ local function Tweentree(tree:Model)
 	end 
 end
 
+
 local function SetAttributes(plr:Player)
 	
 	AttributeConnections[plr.UserId] = {}
-	for _ , data in pairs(PlrDataManager[plr.UserId]) do
-		if type(data) ~= "table" then
+	for key , data in pairs(PlrDataManager[plr.UserId]) do
+		if type(data) ~= "number" then
 			continue 
 		end
-		
-		if not data.Value or type(data.Value) ~= "number" then
+		if data == game.JobId or data == os.time() then
 			continue
 		end
+	   
 		
-		plr:SetAttribute(data.Name , data.Value)
+		plr:SetAttribute(key , data)
 		
-		table.insert(AttributeConnections[plr.UserId] , plr:GetAttributeChangedSignal(data.Name):Connect(function()
-			data.Value = plr:GetAttribute(data.Name)
+		table.insert(AttributeConnections[plr.UserId] , plr:GetAttributeChangedSignal(key):Connect(function()
+			PlrDataManager[plr.UserId][key] = plr:GetAttribute(key)
 		end))
 	end
 	
@@ -168,10 +78,7 @@ end
 local function SetupPlayer(plr:Player , NoOfSlots)
 	--//
 	SetAttributes(plr)
-
 end
-
-
 
 Players.PlayerRemoving:Connect(function(plr)
 	PlrDataManager:Save(plr) -- Save The Data
@@ -190,10 +97,10 @@ Players.PlayerAdded:Connect(function(plr)  -- Set Up The Inventory and The Data 
 	-- Load The Data
 	PlrDataManager:Load(plr , {
 
-		Money = {Name = "Money", Value = 1000},
+		Money  = 1000 ,
 
-		Exp   = {Name = "Exp", Value = 0} ,
-
+		Exp   = 0 ,
+        TimePlayed = 0 ,
 		ToolsBought = ToolsService:CreateTemplate(plr) ,
 
         Inventory = InventoryModule:SetUp(plr)
@@ -218,7 +125,6 @@ local function GiveResources( treeModel:Model, plr:Player )
 	if rewardsData[treeModel.Name] then  
        local selectionChance = math.random(1 , 50)
 
-		-- Loop Through Table To Find The Tree Reward Table Using Model's Name
 		for _ , rewards in ipairs(rewardsData[treeModel.Name]) do 
 		
 		if selectionChance <= rewards.Chance  then -- See if It Gets Selected
@@ -234,7 +140,29 @@ local function GiveResources( treeModel:Model, plr:Player )
 	InventoryModule:AddItem(plr, resourcesData[treeModel:GetAttribute("Wood")])-- Insert The Wood 
 end	
  
- -- Play  The Tree Disappearance Animation
+ local function GetDot(tree:Model , character:Model)
+	
+	local Treelook = tree.PrimaryPart.CFrame.LookVector
+	local direction = (character.PrimaryPart.Position - tree.PrimaryPart.Position).Unit
+	
+	local dot = Treelook:Dot(direction)
+	return dot
+ end
+ 
+ local function GetSide(dot:number)
+		if not dot then return end
+		
+		if dot > 0.6  then
+			return "Front"
+		elseif dot < -0.6 then
+				return "Back"
+		else
+			return "Side"
+		end
+ end
+
+
+-- Play  The Tree Disappearance Animation
 local function PlayTransparencyEffect(Tree:Model)
 	local Cooldown = 1
 	for _ , treeparts in ipairs(Tree:GetDescendants())  do
@@ -249,7 +177,7 @@ end
 
 -- Respawn The Tree  And Set It Up
 local function RespawnTree(oldTree:Model) 
-    task.wait(05)
+	task.wait(5)
 	local treeClone:Model =  treemodelContainer:FindFirstChild(oldTree.Name):Clone()
 	treeClone.Parent = workspace.Trees
 	CollectionService:AddTag(treeClone , "Tree")
@@ -287,52 +215,68 @@ local function DestroyTree(tree, plr)
 			parts:Destroy()	
 		end
 
+
 	end
+		
 	
 	PlayTransparencyEffect(tree) -- Play Fading Effect //
 	RespawnTree(tree) -- Respawn Tree//..
-
 end
 
 treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeName:string)-- The Result Of The Raycast (Tree) And The Axe That It Was Chopped Down With  
-
-	 local ServeraxeData = _Axesdata[AxeName]
-	 
-	 if not ServeraxeData
 	
-	or ServeraxeData.Name ~= "Wooden Axe" and not table.find(PlrDataManager[plr.UserId].ToolsBought , AxeName)   
-	
-	or not  treeModel 
+	 local ServeraxeData = _AxesData[AxeName]
+	 local Tool = plr.Character:FindFirstChildOfClass("Tool")
+  	   if not ServeraxeData  
+	    or not  treeModel 
 		or not treeModel:IsDescendantOf(TreeFolder) 
 		or not CollectionService:HasTag(treeModel , "Tree") 
-		or type(AxeName) ~= "string"  then return end
-
-       
+		or type(AxeName) ~= "string"   
+		or Tool.Name ~= AxeName then
+		
+		return end
+	   
+	   if treeModel:GetAttribute("Debounce") == true  then
+			return
+	   end
+	 
+       if Cooldowns[plr.UserId] then return end
 	-- Check The Player's Inventory To See If There Is Space
 	if not InventoryModule:HasSpace(plr) then
-	    return
+		print("No Space")
+		return
 	end
 	if  not DistanceCheck(treeModel , plr , 15) then return end
 	
-	local Health =  treeModel:GetAttribute("Health")-ServeraxeData.Damage -- Get The Attribute
-	treeModel:SetAttribute("Health" , Health)
+	local dot = GetDot(treeModel , plr.Character)
+	local Side = GetSide(dot)
+    local damageMultiplier = Multiplier[Side]
+		
+	local Damage = ServeraxeData.Damage * damageMultiplier
 	
+	local Health =  treeModel:GetAttribute("Health")- Damage -- Get The Attribute
+	treeModel:SetAttribute("Health" , Health)
+	Cooldowns[plr.UserId] = true
 	if Health <= 0   then  
 		DestroyTree(treeModel , plr)
        return
 	end	
  
     Tweentree(treeModel)
-
+	treeModel:SetAttribute("Debounce" , true)
+	
+	task.delay(2 , function()
+		Cooldowns[plr.UserId] = false
+		treeModel:SetAttribute("Debounce" , false)
+	end)
 end)
-
 
 -- Spawn The Trees On The  Plots
 local function SetupTrees() 
 	local x = 5 
 	local z = 5					
 	local PlotIndex = 1 -- Current index Of Tree Zone  That Is Being Set
-	local Count = 0
+	local Count = 1
 	local treeTemplate  
 	
 	
@@ -346,7 +290,7 @@ local function SetupTrees()
 		PlotIndex += 1	  -- Increment The no
         
 		for Xside = -x , x  do -- Spawn trees in a  Square formation
-			if Count % 25 then
+			if Count % 25 == 0 then
 				task.wait()
 				Count = 0
 			end
@@ -371,7 +315,7 @@ local function SetupTrees()
 end
 
 SetupTrees()
-
+-- Save Every Player's Data If A Server Shuts Down
 game:BindToClose(function()
 	for  _ , plr in ipairs(Players:GetPlayers()) do
 		PlrDataManager:Save(plr)
@@ -390,14 +334,3 @@ task.spawn(function()
 		
 	end
 end)
-
--- Concept Map 
--- Player Spawns In And Is Given A Inventory And Data Frame //  Data Loaded If They Have Played It Before
--- Spawn Trees In Each Zone 
--- Player Gets Rewards
--- . Tree Wood
--- . A Random Reward By Chance
--- Tree is Reseted After A Little Time
--- AutoSave Every 35 Seconds
--- Save Data When Leaving
---//-
