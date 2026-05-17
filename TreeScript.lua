@@ -1,7 +1,7 @@
 --# Project-Code-Hidden-Devs-
 -- Scripter : 590BILL
 -- Discord : 590bill
--- Roblox  : 590Bill
+-- Roblox : 590Bill
 -- Services/
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
@@ -27,6 +27,7 @@ local treemodelContainer = ReplicatedStorage:FindFirstChild("TreesModels")
 local TreeFolder = workspace:FindFirstChild("Trees")
 local folderTrees = TreeFolder:GetChildren()
 
+
 -- Data Table
 local AttributeConnections = {}
 local _AxesData = AxesService.ReturnTools()
@@ -35,7 +36,9 @@ local Cooldowns = {}
   local Multiplier = {
 		Front = 1,
 		Back = 0.5,
-	    Side = 1.75	
+	    Side = 1.75
+		
+		
   }
 
 local function Tweentree(tree:Model) 
@@ -44,7 +47,9 @@ local function Tweentree(tree:Model)
 			if ModelParts:IsA("BasePart") then		
 				local HitEffect = TweenService:Create(ModelParts ,  TweenInfo.new(0.1 , Enum.EasingStyle.Linear , Enum.EasingDirection.Out , 0 , true  ) , {CFrame = ModelParts.CFrame * CFrame.new(0 ,-2.5 , 0)})
 				HitEffect:Play()
+
 			end
+
 	end 
 end
 
@@ -59,6 +64,7 @@ local function SetAttributes(plr:Player)
 			continue
 		end
 	   
+		
 		plr:SetAttribute(key , data)
 		
 		table.insert(AttributeConnections[plr.UserId] , plr:GetAttributeChangedSignal(key):Connect(function()
@@ -67,6 +73,7 @@ local function SetAttributes(plr:Player)
 	end
 	
 end
+
 
 -- Set Up The Inventory And Add The Tools 
 local function SetupPlayer(plr:Player , NoOfSlots)
@@ -84,6 +91,8 @@ Players.PlayerRemoving:Connect(function(plr)
 	AttributeConnections[plr.UserId] = nil
 	PlrDataManager[plr.UserId] = nil
 end)
+
+
 
 Players.PlayerAdded:Connect(function(plr)  -- Set Up The Inventory and The Data Frame	
 	-- Load The Data
@@ -107,9 +116,10 @@ Players.PlayerAdded:Connect(function(plr)  -- Set Up The Inventory and The Data 
 		CollisionService:SetModelGroup(Character , "Player")
 		InventoryModule:Refresh(plr)
 	end
-
-
+    
 end)
+
+
 -- Set Up The Reward And The Wood It Will Drop By Getting The Tree's Name
 local function GiveResources( treeModel:Model, plr:Player )	
 	
@@ -166,6 +176,18 @@ local function PlayTransparencyEffect(Tree:Model)
 
 end
 
+local function DeductDurability(tool:Tool , deduction)
+
+	if tool.Name ~= "Wooden Axe" then
+		local Durability = tool:GetAttribute("Durability") - deduction
+		if Durability <= 0  then
+			tool:Destroy()
+		end
+		tool:SetAttribute("Durability" , Durability)
+	end
+end
+
+
 -- Respawn The Tree  And Set It Up
 local function RespawnTree(oldTree:Model) 
 	task.wait(5)
@@ -195,18 +217,23 @@ local function DistanceCheck(tree:Model , plr:Player , distance)
 end
 
 local function DestroyTree(tree, plr)
-	CollectionService:RemoveTag(tree , "Tree") -- Cant Hit The Tree To Stop The Duplication Of Rewards
-	GiveResources(tree , plr)
 	
+	CollectionService:RemoveTag(tree , "Tree") -- Cant Hit The Tree To Stop The Duplication Of Rewards
+
+	GiveResources(tree , plr)
+
 	for _ , parts in ipairs(tree:GetChildren()) do
 		if parts:IsA("BasePart") then
 			parts.Anchored = false
 			parts.CanCollide = true
-		elseif  parts:IsA("IntValue") or parts.Name == "Decor"  then
+		elseif  parts:IsA("IntValue") or parts.Name == "Decor"  or parts == tree.PrimaryPart then
 			parts:Destroy()	
 		end
+
+
 	end
 		
+	
 	PlayTransparencyEffect(tree) -- Play Fading Effect //
 	RespawnTree(tree) -- Respawn Tree//..
 end
@@ -222,9 +249,9 @@ treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeName:st
 		or not treeModel:IsDescendantOf(TreeFolder)
 		or not CollectionService:HasTag(treeModel , "Tree") 
 		or type(AxeName) ~= "string"   
-		or Tool.Name ~= AxeName then
-		
+		or Tool.Name ~= AxeName then	
 		return end
+	   
 	   if  not  treeModel:GetAttribute("Debounce") then
 			treeModel:SetAttribute("Debounce" , false) 
 	   end
@@ -232,7 +259,7 @@ treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeName:st
 			print(" Debounce")
 			return
 	   end
-	 
+	   
        if Cooldowns[plr.UserId] then return end
 	-- Check The Player's Inventory To See If There Is Space
 	if not InventoryModule:HasSpace(plr) then
@@ -240,6 +267,7 @@ treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeName:st
 		return
 	end
 	if  not DistanceCheck(treeModel , plr , 15) then return end
+	
 	
 	local dot = GetDot(treeModel , plr.Character)
 	local Side = GetSide(dot)
@@ -250,6 +278,7 @@ treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeName:st
 	local Health =  treeModel:GetAttribute("Health")- Damage -- Get The Attribute
 	treeModel:SetAttribute("Health" , Health)
 	Cooldowns[plr.UserId] = true
+	DeductDurability(Tool , 5)
 	if Health <= 0   then  
 		Cooldowns[plr.UserId] = false
 		DestroyTree(treeModel , plr)
@@ -257,6 +286,7 @@ treeChopRemote.OnServerEvent:Connect(function(plr , treeModel:Model , AxeName:st
 	end	
  
     Tweentree(treeModel)
+	treeModel:SetAttribute("LastTimeHit" , os.time())
 	treeModel:SetAttribute("Debounce" , true)
 	
 	task.delay(2 , function()
@@ -302,9 +332,42 @@ local function SetupTrees()
 		end	
 		Count += 1
 	end
+
 end
 
 SetupTrees()
+
+local function RegenerateTreeHealth()
+	while wait(1) do
+		for i, tree:Model in ipairs(CollectionService:GetTagged("Tree")) do
+
+			if not tree  or not tree:IsDescendantOf(TreeFolder) then continue end
+			   if not tree:GetAttribute("Health") then continue end		
+			
+			local Lasthit = tree:GetAttribute("LastTimeHit")
+			if Lasthit == "nil" then continue end
+			local Currentime = os.time()
+			
+			if Currentime - Lasthit > 10 then
+				local MaxHealth = tree:GetAttribute("MaxHealth")
+				local CurrentHealth = tree:GetAttribute("Health")
+				
+				if CurrentHealth < MaxHealth then
+					local regenSpeed = 5
+					CurrentHealth += regenSpeed
+					
+				elseif CurrentHealth > MaxHealth then
+					CurrentHealth = MaxHealth
+					
+				end
+				tree:SetAttribute("Health" , CurrentHealth)
+			end
+			
+		end
+	end
+end
+
+
 -- Save Every Player's Data If A Server Shuts Down
 game:BindToClose(function()
 	for  _ , plr in ipairs(Players:GetPlayers()) do
@@ -312,6 +375,7 @@ game:BindToClose(function()
 	end
 end)
 
+task.spawn(RegenerateTreeHealth())
 -- AutoSave Player's Data
 task.spawn(function()
 	
@@ -323,3 +387,4 @@ task.spawn(function()
 		
 	end
 end)
+
